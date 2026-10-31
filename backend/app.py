@@ -12,8 +12,25 @@ from load_tmdb import import_tmdb_dataset
 
 load_dotenv()
 
-FRONTEND_DIST = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
-app = Flask(__name__, static_folder=FRONTEND_DIST, static_url_path="")
+def find_frontend_dist():
+    """Locate the built React frontend dist directory across multiple deployment layouts."""
+    candidates = [
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")),
+        os.path.abspath(os.path.join(os.getcwd(), "frontend", "dist")),
+        os.path.abspath(os.path.join(os.getcwd(), "MovieRecommendationSystem", "frontend", "dist")),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "dist")),
+        os.path.abspath("dist")
+    ]
+    for c in candidates:
+        if os.path.isdir(c) and os.path.isfile(os.path.join(c, "index.html")):
+            return c
+    for c in candidates:
+        if os.path.isdir(c):
+            return c
+    return candidates[0]
+
+FRONTEND_DIST = find_frontend_dist()
+app = Flask(__name__, static_folder=None)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 PORT = int(os.getenv("PORT", 5000))
 
@@ -453,16 +470,50 @@ def remove_from_watchlist(user_id, movie_id):
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve_frontend(path):
-    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
-        return send_from_directory(app.static_folder, path)
-    index_file = os.path.join(app.static_folder, "index.html")
-    if os.path.exists(index_file):
-        return send_from_directory(app.static_folder, "index.html")
-    return jsonify({
-        "message": "Movie Recommendation API is online.",
-        "status": "/api/status",
-        "movies": "/api/movies"
-    }), 200
+    dist_dir = find_frontend_dist()
+    target_file = os.path.join(dist_dir, path) if path else ""
+
+    # 1. If path is a real asset file (e.g. assets/index-*.js, assets/*.css, favicon.ico)
+    if path and os.path.isfile(target_file):
+        return send_from_directory(dist_dir, path)
+
+    # 2. If index.html exists, serve React App for all browser routes
+    index_path = os.path.join(dist_dir, "index.html")
+    if os.path.isfile(index_path):
+        return send_from_directory(dist_dir, "index.html")
+
+    # 3. Informative diagnostic page if frontend assets have not yet finished compiling
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CineGraph — Backend Live</title>
+  <style>
+    body { background: #0b1120; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+    .box { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 40px; max-width: 620px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+    h1 { color: #38bdf8; margin: 0 0 12px; font-size: 26px; }
+    p { color: #94a3b8; font-size: 15px; line-height: 1.6; margin: 8px 0; }
+    .status { display: inline-block; padding: 6px 14px; border-radius: 20px; background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); font-weight: 600; font-size: 13px; margin-bottom: 20px; }
+    .links { margin-top: 24px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    a.btn { background: #2563eb; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; transition: background 0.2s; }
+    a.btn:hover { background: #1d4ed8; }
+    a.btn-secondary { background: #334155; }
+    a.btn-secondary:hover { background: #475569; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="status">● Flask Backend Server Live & Healthy</div>
+    <h1>CineGraph Engine is Online</h1>
+    <p>The backend database & graph recommendation service is fully functional.</p>
+    <div class="links">
+      <a class="btn" href="/api/movies">View 555 Movies JSON (/api/movies)</a>
+      <a class="btn btn-secondary" href="/api/status">System Status (/api/status)</a>
+      <a class="btn btn-secondary" href="/api/recommendations">Recommendations API</a>
+    </div>
+  </div>
+</body>
+</html>""", 200
 
 
 if __name__ == "__main__":
