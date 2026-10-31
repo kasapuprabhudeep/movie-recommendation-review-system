@@ -9,10 +9,15 @@ export default function StatusBanner({ status, onRefreshStatus }) {
 
   if (!status) return null;
 
+  const isCloud = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
   const mongoLive = status.mongodb?.connected;
   const neo4jLive = status.neo4j?.connected;
 
   const handleSyncToNeo4j = async () => {
+    if (isCloud) {
+      setSyncResult('ℹ️ Cloud Mode Active: Graph recommendations are already running live from the self-contained knowledge graph (2,190 nodes). Neo4j Desktop sync is only needed when running locally.');
+      return;
+    }
     setSyncing(true);
     setSyncResult('');
     try {
@@ -36,36 +41,42 @@ export default function StatusBanner({ status, onRefreshStatus }) {
         <div style={{ display:'flex', alignItems:'center', gap:'1.5rem', flexWrap:'wrap' }}>
           {/* MongoDB */}
           <span style={{ display:'inline-flex', alignItems:'center', gap:'0.35rem' }}>
-            <span style={{ color: mongoLive ? '#4ade80':'#fbbf24', fontSize:'0.9rem' }}>●</span>
+            <span style={{ color: (mongoLive || isCloud) ? '#4ade80':'#fbbf24', fontSize:'0.9rem' }}>●</span>
             <strong>MongoDB:</strong>
-            <span style={{ color: mongoLive ? '#4ade80':'#fbbf24' }}>
-              {mongoLive ? 'Live Connected' : 'Embedded Engine'}
+            <span style={{ color: (mongoLive || isCloud) ? '#4ade80':'#fbbf24' }}>
+              {mongoLive ? 'Live Connected' : isCloud ? 'Cloud Document Store' : 'Embedded Engine'}
             </span>
           </span>
 
-          {/* Neo4j */}
+          {/* Graph Engine / Neo4j */}
           <span
             style={{ display:'inline-flex', alignItems:'center', gap:'0.35rem', cursor:'pointer' }}
             onClick={() => setShowNeo4jGuide(!showNeo4jGuide)}
-            title="Click to view Neo4j controls & setup guide"
+            title={isCloud ? "Graph Engine is active and serving recommendations" : "Click to view Neo4j controls & setup guide"}
           >
-            <span style={{ color: neo4jLive ? '#4ade80':'#f59e0b', fontSize:'0.9rem' }}>●</span>
-            <strong>Neo4j:</strong>
-            <span style={{ color: neo4jLive ? '#4ade80':'#f59e0b', textDecoration:'underline dotted', textUnderlineOffset:'3px' }}>
-              {neo4jLive ? `Live Connected (${status.neo4j?.live_nodes || 0} nodes)` : 'Click to connect Neo4j Desktop ▾'}
+            <span style={{ color: (neo4jLive || isCloud) ? '#4ade80':'#f59e0b', fontSize:'0.9rem' }}>●</span>
+            <strong>Graph Engine:</strong>
+            <span style={{ color: (neo4jLive || isCloud) ? '#4ade80':'#f59e0b', textDecoration: isCloud ? 'none' : 'underline dotted', textUnderlineOffset:'3px' }}>
+              {neo4jLive ? `Live Neo4j (${status.neo4j?.live_nodes || 0} nodes)` : isCloud ? 'Active (Pre-computed Graph)' : 'Click to connect Neo4j Desktop ▾'}
             </span>
           </span>
 
-          {/* Sync Button directly in the bar */}
-          <button
-            className="btn-primary"
-            style={{ fontSize:'0.75rem', padding:'0.25rem 0.65rem', background: neo4jLive ? '#166534':'#2563eb' }}
-            onClick={handleSyncToNeo4j}
-            disabled={syncing}
-            title="Sync all movies, genres, actors, directors to Neo4j graph"
-          >
-            {syncing ? '🔄 Syncing Graph...' : neo4jLive ? '🔄 Sync Data to Neo4j' : '⚡ Connect & Sync to Neo4j'}
-          </button>
+          {/* Mode Pill */}
+          {isCloud ? (
+            <span style={{ background:'#16653422', border:'1px solid #22c55e55', color:'#4ade80', padding:'0.2rem 0.6rem', borderRadius:'9999px', fontSize:'0.75rem', fontWeight:600 }}>
+              🚀 Cloud Graph Engine Online
+            </span>
+          ) : (
+            <button
+              className="btn-primary"
+              style={{ fontSize:'0.75rem', padding:'0.25rem 0.65rem', background: neo4jLive ? '#166534':'#2563eb' }}
+              onClick={handleSyncToNeo4j}
+              disabled={syncing}
+              title="Sync all movies, genres, actors, directors to Neo4j graph"
+            >
+              {syncing ? '🔄 Syncing Graph...' : neo4jLive ? '🔄 Sync Data to Neo4j' : '⚡ Connect & Sync to Neo4j'}
+            </button>
+          )}
 
           {/* Counts */}
           <span>🎬 <strong>{status.data_summary?.movies}</strong> movies</span>
