@@ -12,16 +12,22 @@ if [ -d "MovieRecommendationSystem" ]; then
   cd MovieRecommendationSystem
 fi
 
-echo "==> [1/3] Building React Frontend..."
-cd frontend
-npm install
-npm run build
-cd ..
+# Build React frontend (or use pre-built dist if available)
+if [ -f "frontend/dist/index.html" ]; then
+  echo "==> [1/2] Pre-built frontend dist detected! Skipping npm build..."
+else
+  echo "==> [1/2] Building React Frontend..."
+  cd frontend
+  npm install
+  chmod -R +x node_modules/.bin 2>/dev/null || true
+  npm run build
+  cd ..
+fi
 
-echo "==> [2/3] Installing Python Backend Dependencies..."
+echo "==> [2/2] Installing Python Backend Dependencies..."
 cd backend
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 cd ..
 
-echo "==> [3/3] Build finished successfully!"
+echo "==> Build finished successfully!"
