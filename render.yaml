@@ -3,7 +3,7 @@ services:
     name: movie-recommendation-system
     runtime: python
     buildCommand: "./build.sh"
-    startCommand: "gunicorn --chdir backend app:app --bind 0.0.0.0:$PORT"
+    startCommand: "python -m gunicorn --chdir backend app:app --bind 0.0.0.0:$PORT || python backend/app.py"
     envVars:
       - key: PORT
         value: 10000
