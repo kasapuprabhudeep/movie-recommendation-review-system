@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: movie-recommendation-system
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn --chdir backend app:app --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      # Optional: Add your live MongoDB Atlas & Neo4j AuraDB URIs if desired,
+      # otherwise the app uses its built-in self-contained database engine automatically!
+      # - key: MONGO_URI
+      #   value: mongodb+srv://<user>:<password>@cluster.mongodb.net/movierec
+      # - key: NEO4J_URI
+      #   value: neo4j+s://<dbid>.databases.neo4j.io
+      # - key: NEO4J_USER
+      #   value: neo4j
+      # - key: NEO4J_PASSWORD
+      #   value: <your-neo4j-aura-password>
+

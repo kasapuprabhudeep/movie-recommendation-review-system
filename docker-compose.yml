@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: movierec_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: movierec
+    volumes:
+      - mongo_data:/data/db
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: movierec_neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474" # Neo4j Browser UI
+      - "7687:7687" # Bolt protocol
+    environment:
+      NEO4J_AUTH: neo4j/password123
+      NEO4J_PLUGINS: '["apoc"]'
+    volumes:
+      - neo4j_data:/data
+
+volumes:
+  mongo_data:
+  neo4j_data:
+
